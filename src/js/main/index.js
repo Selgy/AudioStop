@@ -24,9 +24,9 @@ function startRustServer() {
 
         let rustExecutablePath;
         if (process.platform === 'win32') {
-            rustExecutablePath = path.join(decodedPath, 'target', 'release', 'audio_control_server.exe');
+            rustExecutablePath = path.join(decodedPath, 'dist', 'audio_control_server.exe');
         } else if (process.platform === 'darwin') {
-            rustExecutablePath = path.join(decodedPath, 'target', 'release', 'audio_control_server');
+            rustExecutablePath = path.join(decodedPath,'dist', 'audio_control_server');
         } else {
             console.error(`Unsupported platform: ${process.platform}`);
             return;

@@ -6,14 +6,17 @@ use futures_util::StreamExt;
 use windows::Win32::System::Com::{CoInitializeEx, CoUninitialize, CoCreateInstance, CLSCTX_ALL};
 use windows::Win32::Media::Audio::{
     IMMDeviceEnumerator, IMMDevice, MMDeviceEnumerator, eRender, eConsole, IAudioSessionManager2,
-    IAudioSessionControl, IAudioSessionEnumerator, ISimpleAudioVolume
+    IAudioSessionControl, IAudioSessionEnumerator, ISimpleAudioVolume, IAudioSessionControl2
 };
-use windows::core::{ComInterface, PWSTR};
+use windows::core::Interface;  // Correct use of Interface and casting
+use windows::Win32::System::Threading::{OpenProcess, PROCESS_QUERY_INFORMATION, PROCESS_VM_READ};
+use windows::Win32::System::ProcessStatus::GetProcessImageFileNameW;
 use std::ptr;
 use serde::{Deserialize, Serialize};
 use std::{fs};
 use dirs::config_dir;
-use std::slice;
+use std::ffi::OsString;
+use std::os::windows::ffi::OsStringExt;
 
 #[derive(Deserialize, Serialize)]
 struct Config {
@@ -29,7 +32,7 @@ fn load_config() -> Result<Config> {
     // Create the default config if it doesn't exist
     if !config_path.exists() {
         let default_config = Config {
-            applications: vec!["spotify".to_string(), "chrome".to_string()],
+            applications: vec!["spotify".to_string(), "chrome".to_string(), "brave".to_string(), "edge".to_string()],
         };
         fs::create_dir_all(config_path.parent().unwrap())?;
         fs::write(&config_path, serde_json::to_string_pretty(&default_config)?)?;
@@ -118,17 +121,24 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-// Convert PWSTR (wide string pointer) to Rust String
-fn pwstr_to_string(pwstr: PWSTR) -> String {
+// Helper function to get the process name from the process ID
+fn get_process_name_from_pid(pid: u32) -> String {
     unsafe {
-        let mut len = 0;
-        let mut curr = pwstr.0;
-        while *curr != 0 {
-            len += 1;
-            curr = curr.add(1);
+        let process_handle = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, false, pid).unwrap();
+        let mut image_name = vec![0; 1024];
+        let length = GetProcessImageFileNameW(process_handle, &mut image_name) as usize;
+
+        // Close the process handle
+        let _ = windows::Win32::Foundation::CloseHandle(process_handle);
+
+        if length > 0 {
+            // Convert the wide string to a Rust string and return only the executable name (last part of the path)
+            let os_string = OsString::from_wide(&image_name[..length]);
+            let process_path = os_string.to_string_lossy().to_string();
+            return process_path.split('\\').last().unwrap_or("").to_string();
         }
-        let slice = slice::from_raw_parts(pwstr.0, len);
-        String::from_utf16_lossy(slice)
+
+        String::new()  // Return empty string if no process name found
     }
 }
 
@@ -136,33 +146,57 @@ fn control_audio_session(should_mute: bool, apps: &Vec<String>) -> Result<()> {
     unsafe {
         let device_enumerator: IMMDeviceEnumerator = CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)?;
         let default_device: IMMDevice = device_enumerator.GetDefaultAudioEndpoint(eRender, eConsole)?;
-        let audio_session_manager: IAudioSessionManager2 = default_device.Activate(CLSCTX_ALL, Some(ptr::null_mut()))?;
-        let session_enumerator: IAudioSessionEnumerator = audio_session_manager.GetSessionEnumerator()?;
+
+        // Manually activate the IAudioSessionManager2 interface using the COM method
+        let audio_session_manager: IAudioSessionManager2 = activate_audio_session_manager(&default_device)?;
+
+        let session_enumerator = audio_session_manager.GetSessionEnumerator()?;
         let count = session_enumerator.GetCount()?;
 
         for i in 0..count {
-            let session_control: IAudioSessionControl = session_enumerator.GetSession(i)?;
-            let pwstr_name: PWSTR = session_control.GetDisplayName()?;
+            let session_control = session_enumerator.GetSession(i)?;
+            let session_control2: IAudioSessionControl2 = session_control.cast()?;  // Use the `cast` method correctly
 
-            // Convert PWSTR to Rust String
-            let display_name = pwstr_to_string(pwstr_name).trim().to_string();
+            // Get the process ID associated with the session
+            let pid = session_control2.GetProcessId()?;
+            let process_name = get_process_name_from_pid(pid);
 
-            // Handle empty or invalid session names
-            if display_name.is_empty() {
-                println!("Skipping session with empty or invalid display name");
+            if process_name.is_empty() {
+                println!("Skipping session with empty or invalid process name");
                 continue;
             }
 
-            // Only mute/unmute applications from the config
-            if apps.iter().any(|app| display_name.to_lowercase().contains(app)) {
-                let simple_audio_volume: ISimpleAudioVolume = session_control.cast()?;
+            println!("Detected process: {}", process_name);
+
+            // Check if the process matches any of the applications from the config
+            if apps.iter().any(|app| process_name.to_lowercase().contains(app)) {
+                let simple_audio_volume: ISimpleAudioVolume = session_control.cast()?;  // Use `cast` method here as well
                 simple_audio_volume.SetMute(should_mute, ptr::null())?;
-                println!("{} session for application: {}", if should_mute { "Muted" } else { "Unmuted" }, display_name);
+                println!("{} session for application: {}", if should_mute { "Muted" } else { "Unmuted" }, process_name);
             } else {
-                println!("Skipping session for application: {}", display_name);
+                println!("Skipping session for application: {}", process_name);
             }
         }
 
         Ok(())
+    }
+}
+
+// Manual activation of IAudioSessionManager2 using COM interface
+fn activate_audio_session_manager(device: &IMMDevice) -> Result<IAudioSessionManager2> {
+    unsafe {
+        let mut session_manager: Option<IAudioSessionManager2> = None;
+        let hr = device.as_raw().Activate(
+            &IAudioSessionManager2::IID,
+            CLSCTX_ALL,
+            std::ptr::null_mut(),
+            &mut session_manager as *mut _ as *mut _,
+        );
+
+        if hr.is_err() {
+            return Err(anyhow::anyhow!("Failed to activate IAudioSessionManager2"));
+        }
+
+        Ok(session_manager.unwrap())
     }
 }
