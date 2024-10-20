@@ -45,7 +45,7 @@ var config = {
     jsxBin: "off"
   },
   installModules: [],
-  copyAssets: ["./dist/audio_control_server.exe", "./dist/icon.ico", "./js", "./jsx"],
+  copyAssets: ["./dist/audio_control_server.exe", "./js", "./jsx"],
   copyZipAssets: []
 };
 

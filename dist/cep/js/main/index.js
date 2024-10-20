@@ -2,10 +2,10 @@ const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
-let rustServerProcess = null;
+let audioServerProcess = null;
 
-function startRustServer() {
-    console.log("Starting Rust audio control server...");
+function startAudioServer() {
+    console.log("Starting audio control server...");
     if (typeof process !== 'undefined' && process.versions != null && process.versions.node != null) {
         console.log("Node.js environment detected. Node version:", process.version);
         const extensionRoot = getExtensionRootPath();
@@ -22,59 +22,60 @@ function startRustServer() {
         }
         console.log('Decoded Extension Root Path:', decodedPath);
 
-        let rustExecutablePath;
+        let audioExecutablePath;
         if (process.platform === 'win32') {
-            rustExecutablePath = path.join(decodedPath, 'dist', 'audio_control_server.exe');
+            audioExecutablePath = path.join(decodedPath, 'dist', 'audio_control_server.exe');
         } else if (process.platform === 'darwin') {
-            rustExecutablePath = path.join(decodedPath,'dist', 'audio_control_server');
+            audioExecutablePath = path.join(decodedPath, 'dist', 'audio_control_server');
         } else {
             console.error(`Unsupported platform: ${process.platform}`);
             return;
         }
-        rustExecutablePath = path.normalize(rustExecutablePath);
-        console.log('Corrected Rust executable path:', rustExecutablePath);
+        audioExecutablePath = path.normalize(audioExecutablePath);
+        console.log('Audio server executable path:', audioExecutablePath);
 
-        if (!fs.existsSync(rustExecutablePath)) {
-            console.error(`Rust executable not found at ${rustExecutablePath}`);
+        if (!fs.existsSync(audioExecutablePath)) {
+            console.error(`Audio server executable not found at ${audioExecutablePath}`);
             return;
         }
 
-        rustServerProcess = spawn(rustExecutablePath, [], {
-            cwd: path.dirname(rustExecutablePath),
-            env: {...process.env, RUST_BACKTRACE: '1'},
-            stdio: ['inherit', 'pipe', 'pipe'],
+        audioServerProcess = spawn(audioExecutablePath, [], {
+            cwd: path.dirname(audioExecutablePath),
+            env: { ...process.env },
+            stdio: ['ignore', 'pipe', 'pipe'],
             detached: false
         });
 
-        rustServerProcess.stdout.on('data', (data) => {
-            console.log(`Rust server stdout: ${data.toString().trim()}`);
-        });
-        
-        rustServerProcess.stderr.on('data', (data) => {
-            console.error(`Rust server stderr: ${data.toString().trim()}`);
+        audioServerProcess.stdout.on('data', (data) => {
+            console.log(`Audio server stdout: ${data.toString().trim()}`);
         });
 
-        rustServerProcess.on('error', (err) => {
-            console.error(`Failed to start Rust server: ${err}`);
+        audioServerProcess.stderr.on('data', (data) => {
+            console.error(`Audio server stderr: ${data.toString().trim()}`);
         });
 
-        rustServerProcess.on('close', (code) => {
+        audioServerProcess.on('error', (err) => {
+            console.error(`Failed to start audio server: ${err}`);
+        });
+
+        audioServerProcess.on('close', (code) => {
             if (code !== 0) {
-                console.error(`Rust server process exited with code ${code}`);
+                console.error(`Audio server process exited with code ${code}`);
             } else {
-                console.log('Rust server process exited successfully');
+                console.log('Audio server process exited successfully');
             }
-            rustServerProcess = null;
+            audioServerProcess = null;
         });
     } else {
         console.error('This script should only be run in a Node.js environment.');
     }
 }
 
-function stopRustServer() {
-    if (rustServerProcess) {
-        console.log("Stopping Rust server...");
-        rustServerProcess.kill();
+function stopAudioServer() {
+    if (audioServerProcess) {
+        console.log("Stopping audio server...");
+        audioServerProcess.kill();
+        audioServerProcess = null;
     }
 }
 
@@ -87,20 +88,26 @@ function getExtensionRootPath() {
     }
 }
 
-console.log("Background script loaded. Starting Rust server...");
-startRustServer();
+console.log("Background script loaded. Starting audio server...");
+startAudioServer();
 
 // Handle extension shutdown
-process.on('exit', stopRustServer);
-process.on('SIGINT', stopRustServer);
-process.on('SIGTERM', stopRustServer);
+process.on('exit', stopAudioServer);
+process.on('SIGINT', stopAudioServer);
+process.on('SIGTERM', stopAudioServer);
 
 // For Windows, handle the SIGBREAK signal
 if (process.platform === 'win32') {
-    process.on('SIGBREAK', stopRustServer);
+    process.on('SIGBREAK', stopAudioServer);
 }
 
-// If we're in the Adobe CEP environment, try to use its event system
+// If we're in the Adobe CEP environment, use its event system
 if (typeof window !== 'undefined' && window.__adobe_cep__) {
-    window.__adobe_cep__.addEventListener('com.adobe.csxs.events.ApplicationBeforeQuit', stopRustServer);
+    window.__adobe_cep__.addEventListener('com.adobe.csxs.events.ApplicationBeforeQuit', stopAudioServer);
+    window.__adobe_cep__.addEventListener('com.adobe.csxs.events.WindowVisibilityChanged', (event) => {
+        if (event.data === 'false') {
+            // Window is being hidden or closed
+            stopAudioServer();
+        }
+    });
 }

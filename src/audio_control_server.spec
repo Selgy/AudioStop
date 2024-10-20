@@ -5,7 +5,7 @@ a = Analysis(
     ['audio_control_server.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[('icon.ico', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

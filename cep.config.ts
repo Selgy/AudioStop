@@ -53,7 +53,6 @@ const config: CEP_Config = {
   installModules: [],
   copyAssets: [
     "./dist/audio_control_server.exe",
-    "./dist/icon.ico",
     "./js",
     "./jsx",
   ],
