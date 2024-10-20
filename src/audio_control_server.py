@@ -13,12 +13,16 @@ from pycaw.pycaw import AudioUtilities, ISimpleAudioVolume
 import comtypes
 import pystray
 from PIL import Image
+import psutil
 
 # Initialize logging
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
+
+# Global icon variable
+icon = None  # Global variable to hold the tray icon
 
 # Application path
 if getattr(sys, 'frozen', False):
@@ -87,7 +91,7 @@ def com_wrapper(func, *args, **kwargs):
 async def fade_to_unmute(volume):
     try:
         steps = 20
-        sleep_time = 0.05  # Total fade time = steps * sleep_time = 1 second
+        sleep_time = 0.02  # Total fade time = steps * sleep_time = 1 second
         for i in range(steps):
             new_volume = (i + 1) / steps
             await asyncio.to_thread(com_wrapper, volume.SetMasterVolume, new_volume, None)
@@ -120,6 +124,9 @@ async def unmute_target_processes():
             delay_seconds = UNMUTE_DELAY_SECONDS
         logging.debug(f"Delaying unmute by {delay_seconds} seconds.")
         await asyncio.sleep(delay_seconds)  # Delay unmute by specified seconds
+        if exit_event.is_set():
+            logging.debug("Exit event set, cancelling unmute operation")
+            return
         logging.debug("Attempting to unmute target processes.")
         sessions = await asyncio.to_thread(com_wrapper, AudioUtilities.GetAllSessions)
         for session in sessions:
@@ -139,7 +146,6 @@ async def unmute_target_processes():
     except Exception as e:
         logging.error(f"Error in unmute_target_processes: {e}", exc_info=True)
 
-# WebSocket server handler
 async def handler(websocket):
     global unmute_task  # Declare unmute_task as global
     logging.info("Client connected")
@@ -148,6 +154,11 @@ async def handler(websocket):
             logging.info(f"Received message: {message}")
             with state_lock:
                 current_muting_enabled = muting_enabled
+
+            if message == 'shutdown':
+                logging.info("Received shutdown command")
+                exit_event.set()
+                break  # Exit the handler loop
 
             if not current_muting_enabled:
                 logging.info("Muting is disabled, ignoring message")
@@ -175,10 +186,14 @@ async def handler(websocket):
         logging.info("Handler task was cancelled")
     except websockets.exceptions.ConnectionClosed as e:
         logging.info("Client disconnected")
+        # Set exit event when client disconnects
+        exit_event.set()
     except Exception as e:
         logging.error(f"Error in WebSocket handler: {e}", exc_info=True)
 
 def run_tray_icon():
+    global icon  # Declare icon as global
+
     def get_icon_path():
         if getattr(sys, 'frozen', False):
             # The application is frozen
@@ -266,6 +281,7 @@ def run_tray_icon():
         icon.stop()
         exit_event.set()
 
+
     def update_menu(icon):
         with state_lock:
             enabled = muting_enabled
@@ -280,36 +296,94 @@ def run_tray_icon():
     # Create the icon
     icon = pystray.Icon("AudioStop", image, "AudioStop")
     update_menu(icon)
-    icon.run()
+    icon.run()  # Use run() instead of run_detached()
 
-# Start the tray icon in a separate thread
+# Start the tray icon
 def start_tray_icon():
-    tray_thread = threading.Thread(target=run_tray_icon, daemon=True)
+    def tray_icon_thread():
+        run_tray_icon()
+    # Start the tray icon in a daemon thread
+    tray_thread = threading.Thread(target=tray_icon_thread, daemon=True)
     tray_thread.start()
+
 
 # Function to wait for the exit event
 async def wait_for_exit_event():
     loop = asyncio.get_running_loop()
     await loop.run_in_executor(None, exit_event.wait)
 
-# Main async function
+# Monitor the parent process and exit if it exits
+def monitor_parent():
+    parent_pid = os.getppid()
+    logging.info(f"Monitoring parent process with PID: {parent_pid}")
+    try:
+        parent_process = psutil.Process(parent_pid)
+    except psutil.NoSuchProcess:
+        # Parent process has already exited
+        logging.info("Parent process has already exited. Exiting.")
+        exit_event.set()
+        return
+
+    while not exit_event.is_set():
+        if not parent_process.is_running():
+            logging.info("Parent process has exited. Shutting down.")
+            exit_event.set()
+            break
+        time.sleep(1)
+
 async def main():
     try:
         # Start the server
         server = await websockets.serve(handler, 'localhost', 3350)
         logging.info("WebSocket server started on ws://localhost:3350")
+
+        # Wait for the exit event
         await wait_for_exit_event()
         logging.info("Exit event received, shutting down server")
         server.close()
         await server.wait_closed()
+
+        # Cancel all pending tasks
+        pending = asyncio.all_tasks()
+        for task in pending:
+            if task is not asyncio.current_task():
+                task.cancel()
+        await asyncio.gather(*pending, return_exceptions=True)
+
+        # Stop the tray icon if it's running
+        if icon:
+            logging.info("Stopping tray icon")
+            icon.stop()
+
+        # Wait a moment to ensure the tray icon stops
+        await asyncio.sleep(0.5)
+
+        logging.info("Script exiting")
     except Exception as e:
-        logging.error(f"Failed to start WebSocket server: {e}", exc_info=True)
+        logging.error(f"Error in main: {e}", exc_info=True)
+        sys.exit(1)
 
 if __name__ == "__main__":
+    # Check if running as PyInstaller bootloader
+    if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+        # We are running in a PyInstaller bundle
+        is_bundle = True
+    else:
+        is_bundle = False
+
+    # Proceed with starting the application
     try:
         start_tray_icon()
+
+        # Start the parent process monitor in a separate daemon thread
+        parent_monitor_thread = threading.Thread(target=monitor_parent, daemon=True)
+        parent_monitor_thread.start()
+
         asyncio.run(main())
     except Exception as e:
         logging.error(f"Unexpected error in main: {e}", exc_info=True)
-        
+        sys.exit(1)
+
+
+
 #pyinstaller --onefile --add-data "icon.ico;." audio_control_server.py

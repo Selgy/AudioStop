@@ -38,14 +38,14 @@ var config = {
   zxp: {
     country: "US",
     province: "CA",
-    org: "MyCompany",
+    org: "Selgy",
     password: "mypassword",
     tsa: "http://timestamp.digicert.com/",
     sourceMap: false,
     jsxBin: "off"
   },
   installModules: [],
-  copyAssets: ["./dist/audio_control_server.exe", "./js", "./jsx"],
+  copyAssets: ["./dist/audio_control_server/*", "./js", "./jsx"],
   copyZipAssets: []
 };
 
@@ -112,4 +112,4 @@ switch (getAppNameSafely()) {
 }
 
 // https://extendscript.docsforadobe.dev/interapplication-communication/bridgetalk-class.html?highlight=bridgetalk#appname
-})(this);//# sourceMappingURL=index.js.map
+})(this);

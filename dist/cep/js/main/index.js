@@ -1,5 +1,6 @@
 const { spawn } = require('child_process');
 const path = require('path');
+const os = require('os');
 const fs = require('fs');
 
 let audioServerProcess = null;
@@ -12,23 +13,23 @@ function startAudioServer() {
         console.log('Extension root path:', extensionRoot);
 
         let decodedPath;
-        if (process.platform === 'win32') {
+        if (os.platform() === 'win32') {
             decodedPath = decodeURIComponent(extensionRoot.replace(/^file:[/\\]*/, ''));
-        } else if (process.platform === 'darwin') {
+        } else if (os.platform() === 'darwin') {
             decodedPath = '/' + decodeURIComponent(extensionRoot.replace(/^file:\/\//, ''));
         } else {
-            console.error(`Unsupported platform: ${process.platform}`);
+            console.error(`Unsupported platform: ${os.platform()}`);
             return;
         }
         console.log('Decoded Extension Root Path:', decodedPath);
 
         let audioExecutablePath;
-        if (process.platform === 'win32') {
-            audioExecutablePath = path.join(decodedPath, 'dist', 'audio_control_server.exe');
-        } else if (process.platform === 'darwin') {
-            audioExecutablePath = path.join(decodedPath, 'dist', 'audio_control_server');
+        if (os.platform() === 'win32') {
+            audioExecutablePath = path.join(decodedPath,  'audio_control_server.exe');
+        } else if (os.platform() === 'darwin') {
+            audioExecutablePath = path.join(decodedPath, 'audio_control_server');
         } else {
-            console.error(`Unsupported platform: ${process.platform}`);
+            console.error(`Unsupported platform: ${os.platform()}`);
             return;
         }
         audioExecutablePath = path.normalize(audioExecutablePath);
@@ -42,16 +43,9 @@ function startAudioServer() {
         audioServerProcess = spawn(audioExecutablePath, [], {
             cwd: path.dirname(audioExecutablePath),
             env: { ...process.env },
-            stdio: ['ignore', 'pipe', 'pipe'],
-            detached: false
-        });
-
-        audioServerProcess.stdout.on('data', (data) => {
-            console.log(`Audio server stdout: ${data.toString().trim()}`);
-        });
-
-        audioServerProcess.stderr.on('data', (data) => {
-            console.error(`Audio server stderr: ${data.toString().trim()}`);
+            stdio: 'ignore',
+            detached: false,
+            windowsHide: true  // Prevent console window from appearing
         });
 
         audioServerProcess.on('error', (err) => {
@@ -74,10 +68,28 @@ function startAudioServer() {
 function stopAudioServer() {
     if (audioServerProcess) {
         console.log("Stopping audio server...");
-        audioServerProcess.kill();
-        audioServerProcess = null;
+        // Send a 'shutdown' message over WebSocket before killing the process
+        sendShutdownMessageToAudioServer();
+        // Wait a moment to ensure the message is sent
+        setTimeout(() => {
+            // Kill the process and all its child processes
+            killProcessTree(audioServerProcess.pid);
+            audioServerProcess = null;
+        }, 500);
     }
 }
+
+function killProcessTree(pid) {
+    const kill = require('tree-kill');
+    kill(pid, 'SIGTERM', (err) => {
+        if (err) {
+            console.error(`Failed to kill process tree: ${err}`);
+        } else {
+            console.log('Process tree killed');
+        }
+    });
+}
+
 
 function getExtensionRootPath() {
     if (typeof window !== 'undefined' && window.__adobe_cep__) {
@@ -110,4 +122,11 @@ if (typeof window !== 'undefined' && window.__adobe_cep__) {
             stopAudioServer();
         }
     });
+    // Add beforeunload event listener
+    window.addEventListener('beforeunload', stopAudioServer);
+}
+
+// For non-CEP environments or if window is undefined
+if (typeof window !== 'undefined') {
+    window.addEventListener('beforeunload', stopAudioServer);
 }

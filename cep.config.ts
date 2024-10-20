@@ -44,7 +44,7 @@ const config: CEP_Config = {
   zxp: {
     country: "US",
     province: "CA",
-    org: "MyCompany",
+    org: "Selgy",
     password: "mypassword",
     tsa: "http://timestamp.digicert.com/",
     sourceMap: false,
@@ -52,7 +52,7 @@ const config: CEP_Config = {
   },
   installModules: [],
   copyAssets: [
-    "./dist/audio_control_server.exe",
+    "./dist/audio_control_server/*",
     "./js",
     "./jsx",
   ],
