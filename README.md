@@ -1,114 +1,51 @@
-L'extension AudioStop pour Premiere Pro permet de mettre en pause automatiquement l'audio de certaines applications (comme Chrome ou Spotify) lorsque vous appuyez sur "Play" dans Premiere Pro, et de rétablir l'audio lorsque vous appuyez sur "Pause". Cette fonctionnalité assure que seules les pistes audio de votre projet sont audibles pendant l'édition.
+# AudioStop for Premiere Pro
 
-Dispo uniquement sur Windows
+AudioStop is an extension for Adobe Premiere Pro that automatically pauses the audio from selected applications (such as Chrome or Spotify) when you press "Play" in Premiere Pro and restores the audio when you press "Pause". This ensures that only your project’s audio is audible while editing.
 
-Fonctionnalités principales
+**Available only on Windows**
 
+## Key Features
 
+- **Automatic App Muting**: During playback in Premiere Pro, selected applications are automatically muted. The audio is restored when playback is stopped.
+- **Customizable Delay**: You can adjust the delay before the audio returns after stopping playback.
+- **Script Toggle**: If you don’t want this automation to be active at all times, you can disable the script directly from the system tray icon.
 
+## Installation with ZXP Installer
 
+Follow these steps to install the `.zxp` file using ZXP Installer:
 
-Pause automatique des applications : Lors de la lecture dans Premiere Pro, les applications sélectionnées sont automatiquement mises en sourdine, et l'audio revient lorsque vous arrêtez la lecture.
+### Step 1: Download and Install ZXP Installer
+- Download ZXP Installer from [aescripts.com](https://aescripts.com).
 
+### Step 2: Download AudioStop
+- Download the latest version of the `.zxp` file from the official website.
 
+### Step 3: Install the Extension
+- Open ZXP Installer.
+- Drag and drop the downloaded `.zxp` file into the ZXP Installer window.
+- The installation will start automatically, and you will see a confirmation when it is complete.
 
-Personnalisation du délai : Vous pouvez ajuster le délai avant que l'audio ne revienne après l'arrêt de la lecture.
+### Step 4: Launch Premiere Pro
+- After installation, open Adobe Premiere Pro, and the extension should be ready to use.
 
+## Usage with the System Tray
 
+### Launch the Extension
+- An **AudioStop** icon will appear in the system tray.
 
-Désactivation du script : Si vous ne souhaitez pas que cette automatisation fonctionne tout le temps, vous pouvez désactiver le script directement depuis l'icône dans la barre des tâches.
+### Customize Settings
+- **Enable/Disable the Script**: Click the icon to enable or disable the script.
+- **Adjust Sound Reactivation Delay**: Set the delay for when the audio should resume after playback stops.
+- **Add/Remove Applications**: Modify the list of applications whose audio is controlled.
 
-Installation avec ZXP Installer
+### Premiere Pro Automation
+- The script triggers automatically during playback in Premiere Pro unless you have disabled this feature via the tray icon.
 
-Comment installer le fichier .zxp avec ZXP Installer
+## Support
 
+If you encounter any issues, feel free to report them on this [Discord server](https://discord.gg/s2gfM3w47y).
 
+## Built With
 
-Pour installer le fichier .zxp, suivez ces étapes en utilisant ZXP Installer :
+AudioStop was developed using [Bolt-cep](https://hyperbrew.co/resources/bolt-cep), which served as a foundational resource for creating the extension.
 
-
-
-
-
-Télécharger et installer ZXP Installer :
-
-
-
-
-
-Téléchargez ZXP Installer depuis aescripts.com.
-
-
-
-Télécharger AudioImporter :
-
-
-
-
-
-Téléchargez la dernière version du fichier .zxp
-
-
-
-Installer l'extension :
-
-
-
-
-
-Ouvrez ZXP Installer.
-
-
-
-Glissez-déposez le fichier .zxp téléchargé dans la fenêtre de ZXP Installer.
-
-
-
-L'installation débutera automatiquement, et une fois terminée, vous verrez une confirmation.
-
-
-
-Ouvrir Premiere Pro :
-
-
-
-
-
-Après l'installation, lancez Adobe Premiere Pro et ça devrait directement fonctionner.
-
-Utilisation avec le tray
-
-
-
-
-
-Lancez l'extension : Une icône AudioStop apparaîtra dans la barre d'icônes système. 
-
-
-
-
-
-Personnalisez les paramètres :
-
-
-
-
-
-Activez ou désactivez le script en cliquant sur l'option correspondante.
-
-
-
-Réglez le délai de réactivation du son après l'arrêt de la lecture.
-
-
-
-Ajoutez ou supprimez des applications dans la liste des programmes à contrôler.
-
-
-
-Automatisation dans Premiere Pro : Le script se déclenche automatiquement lors de la lecture dans Premiere Pro, sauf si vous avez désactivé cette fonctionnalité via l'icône dans le tray.
-
-
-Si vous avez le moindre problème vous pouvez me le reporter sur ce discord: https://discord.gg/s2gfM3w47y
-
-J'ai utilisé comme base pour creer cette extension, Bolt-cep que vous pouvez retrouver ici: https://hyperbrew.co/resources/bolt-cep
