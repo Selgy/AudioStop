@@ -1,7 +1,12 @@
+
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <script>"use strict";
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>AudioStop</title>
+    <script>"use strict";
 window.require = typeof require === "function" ? function (require, document) { var tmp = document.querySelector("script[data-main]"); if (tmp) {
     require(tmp.dataset.main);
 } return require; }(require, document) : function (document) { var COMMA_DELIMITER = /,[ ]*/gim; var SLASH_DELIMITER = /[\/]+/gim; function loadPrerequisites() { var head = document.head; var tmpScripts = document.querySelector("script[data-scripts]"); var tmpStyles = document.querySelector("script[data-styles]"); var styles = tmpStyles ? tmpStyles.dataset.styles : ""; var scripts = tmpScripts ? tmpScripts.dataset.scripts : ""; var tmpBaseDir = document.querySelector("script[data-base_dir]"); var tag; var baseDir = tmpBaseDir && tmpBaseDir.dataset.base_dir; baseDir = baseDir && typeof baseDir === "string" ? baseDir : "./"; baseDir = new URL(baseDir, location.href).href; if (baseDir) {
@@ -39,16 +44,13 @@ else {
     window.addEventListener("load", req.bind(this, new URL(mainStr, baseDir).href));
 } return req; }(); }(document);
 </script>
+  </head>
 
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StopPlayer</title>
-  
-</head>
-<body>
+  <body>
     <div id="root"></div>
-    
-    
-  <script src="../assets/main-4efc5bfc.js"></script>
-</body>
+    <script>
+      window.location.href = 'http://localhost:3000/main/index.html';
+    </script>
+  </body>
 </html>
+

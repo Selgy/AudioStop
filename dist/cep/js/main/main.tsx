@@ -1,142 +1,278 @@
 // main.tsx
-import React, { useEffect, useState, useRef } from "react";
-import CSInterface from "../lib/cep/csinterface"; // Adjust the path as necessary
-
-interface PlayheadPosition {
-  seconds: number;
-  ticks: number;
-  frameCount: number;
-}
-
-interface PositionError {
-  error: string;
-}
-
-type PositionResult = PlayheadPosition | PositionError;
+import React, { useState } from "react";
+import { CONFIG } from "../lib/utils/config";
+import { VERSION } from "../lib/utils/version";
+import { useWebSocket } from "../lib/utils/useWebSocket";
+import { StatusCard } from "./components/StatusCard";
+import { ConnectionIndicator } from "./components/ConnectionIndicator";
 
 const Main: React.FC = () => {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [websocket, setWebsocket] = useState<WebSocket | null>(null);
-  const lastPosition = useRef<number | null>(null);
-  const csInterfaceRef = useRef<any>(null);
+  const { connectionStatus, sendMessage } = useWebSocket();
+  const [mutingEnabled, setMutingEnabled] = useState(true);
+  const [unmuteDelay, setUnmuteDelay] = useState(1.0);
+  const [targetApps, setTargetApps] = useState('chrome.exe, firefox.exe, Spotify.exe');
 
-  useEffect(() => {
-    // Initialize CSInterface
-    const csInterface = new CSInterface();
-    csInterfaceRef.current = csInterface;
+  // Function to send config update to server
+  const updateServerConfig = (config: any) => {
+    if (connectionStatus === 'connected') {
+      sendMessage(JSON.stringify({
+        type: 'update_config',
+        ...config
+      }));
+    }
+  };
 
-    const ws = new WebSocket('ws://localhost:3350');
-    ws.onopen = () => {
-      console.log('Connected to Rust server');
-      setWebsocket(ws);
-    };
-    ws.onerror = (error) => {
-      console.error('WebSocket Error:', error);
-    };
-    ws.onclose = () => {
-      console.log('Disconnected from Rust server');
-    };
+  const { COLORS } = CONFIG.UI;
 
-    return () => {
-      if (ws) ws.close();
-    };
-  }, []);
+  return (
+    <div style={{
+      padding: '20px',
+      fontFamily: 'Roboto, Arial, sans-serif',
+      color: COLORS.TEXT_PRIMARY,
+      background: COLORS.BACKGROUND,
+      height: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '16px',
+      overflow: 'auto'
+    }}>
+      {/* Header */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingBottom: '16px',
+        borderBottom: `1px solid ${COLORS.BORDER}`
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '12px',
+            background: `linear-gradient(135deg, ${COLORS.ACCENT} 0%, ${COLORS.ACCENT_HOVER} 100%)`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '20px',
+            boxShadow: '0 4px 12px rgba(78, 82, 255, 0.4)',
+            border: '1px solid rgba(255, 255, 255, 0.1)'
+          }}>
+            🔇
+          </div>
+          <h2 style={{ margin: 0, fontSize: '22px', fontWeight: '700', letterSpacing: '-0.5px' }}>
+            AudioStop
+          </h2>
+        </div>
+        <ConnectionIndicator status={connectionStatus} />
+      </div>
 
-  useEffect(() => {
-    const monitorTimeline = () => {
-      if (!csInterfaceRef.current) {
-        console.error("CSInterface not initialized.");
-        return;
-      }
+      {/* Main Content */}
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '14px',
+        flex: 1,
+        overflow: 'auto'
+      }}>
+        {/* Enable/Disable Toggle */}
+        <div style={{
+          padding: '20px',
+          background: COLORS.SURFACE,
+          borderRadius: '16px',
+          border: `1px solid ${COLORS.BORDER}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+          backdropFilter: 'blur(10px)'
+        }}>
+          <div>
+            <div style={{ fontSize: '15px', fontWeight: '600', marginBottom: '4px' }}>
+              Auto Muting
+            </div>
+            <div style={{ fontSize: '13px', color: COLORS.TEXT_SECONDARY }}>
+              {mutingEnabled ? '✓ Enabled' : '○ Disabled'}
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              const newValue = !mutingEnabled;
+              setMutingEnabled(newValue);
+              updateServerConfig({ muting_enabled: newValue });
+            }}
+            style={{
+              width: '56px',
+              height: '30px',
+              borderRadius: '15px',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              cursor: 'pointer',
+              position: 'relative',
+              background: mutingEnabled 
+                ? `linear-gradient(135deg, ${COLORS.ACCENT} 0%, ${COLORS.ACCENT_HOVER} 100%)`
+                : 'rgba(255, 255, 255, 0.1)',
+              transition: 'all 0.3s ease',
+              padding: 0,
+              boxShadow: mutingEnabled ? '0 4px 12px rgba(78, 82, 255, 0.4)' : 'none',
+              flexShrink: 0
+            }}
+          >
+            <div style={{
+              width: '26px',
+              height: '26px',
+              borderRadius: '13px',
+              backgroundColor: 'white',
+              position: 'absolute',
+              top: '1px',
+              left: mutingEnabled ? '27px' : '2px',
+              transition: 'left 0.3s ease',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+            }} />
+          </button>
+        </div>
 
-      // Define the ExtendScript code as a string
-      const script = `
-        function getPlayheadPosition() {
-            try {
-                var sequence = app.project.activeSequence;
-                if (sequence) {
-                    if (typeof sequence.getPlayerPosition === 'function') {
-                        var position = sequence.getPlayerPosition();
-                        if (position) {
-                            var res = {
-                                seconds: position.seconds,
-                                ticks: position.ticks,
-                                frameCount: position.frameCount
-                            };
-                            return JSON.stringify(res);
-                        } else {
-                            return JSON.stringify({ error: "Position is undefined" });
-                        }
-                    } else {
-                        return JSON.stringify({ error: "getPlayerPosition() method not found on sequence." });
-                    }
-                } else {
-                    return JSON.stringify({ error: "No active sequence found." });
+        {/* Info */}
+        <div style={{
+          padding: '16px',
+          background: COLORS.SURFACE,
+          borderRadius: '16px',
+          border: `1px solid ${COLORS.BORDER}`,
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+          backdropFilter: 'blur(10px)'
+        }}>
+          <div style={{ fontSize: '12px', color: COLORS.TEXT_SECONDARY, marginBottom: '10px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            ℹ️ INFO
+          </div>
+          <div style={{ fontSize: '13px', lineHeight: '1.6', color: COLORS.TEXT_SECONDARY }}>
+            Timeline monitoring is active in the background. Apps will be muted automatically when you play.
+          </div>
+        </div>
+
+        {/* Unmute Delay */}
+        <div style={{
+          padding: '20px',
+          background: COLORS.SURFACE,
+          borderRadius: '16px',
+          border: `1px solid ${COLORS.BORDER}`,
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+          backdropFilter: 'blur(10px)'
+        }}>
+          <label style={{ fontSize: '12px', color: COLORS.TEXT_SECONDARY, display: 'block', marginBottom: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            ⏱️ UNMUTE DELAY
+          </label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={unmuteDelay}
+              onChange={(e) => {
+                const val = e.target.value;
+                // Allow typing numbers and decimal point
+                if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                  const numVal = parseFloat(val);
+                  if (val === '' || (!isNaN(numVal) && numVal >= 0 && numVal <= 10)) {
+                    setUnmuteDelay(val === '' ? 0 : numVal);
+                  }
                 }
-            } catch (e) {
-                var errorObj = {
-                    error: e.toString(),
-                    fileName: e.fileName ? new File(e.fileName).fsName : "unknown",
-                    line: e.line || 0
-                };
-                return JSON.stringify(errorObj);
-            }
-        }
-        getPlayheadPosition();
-      `;
+              }}
+              onBlur={(e) => {
+                const val = parseFloat(e.target.value);
+                if (!isNaN(val) && val >= 0) {
+                  updateServerConfig({ unmute_delay_seconds: val });
+                }
+                e.target.style.borderColor = COLORS.BORDER;
+                e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)';
+              }}
+              placeholder="1.0"
+              style={{
+                flex: 1,
+                padding: '12px 16px',
+                background: COLORS.SURFACE,
+                border: `1px solid ${COLORS.BORDER}`,
+                borderRadius: '12px',
+                color: COLORS.TEXT_PRIMARY,
+                fontSize: '15px',
+                fontWeight: '600',
+                outline: 'none',
+                transition: 'all 0.3s ease',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+                textAlign: 'center'
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = COLORS.ACCENT;
+                e.target.style.boxShadow = '0 4px 20px rgba(78, 82, 255, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1)';
+              }}
+            />
+            <span style={{ fontSize: '15px', color: COLORS.TEXT_SECONDARY, fontWeight: '600', flexShrink: 0 }}>sec</span>
+          </div>
+        </div>
 
-      csInterfaceRef.current.evalScript(script, (result: string) => {
-        console.log("Raw result:", result);
+        {/* Target Apps */}
+        <div style={{
+          padding: '20px',
+          background: COLORS.SURFACE,
+          borderRadius: '16px',
+          border: `1px solid ${COLORS.BORDER}`,
+          flex: 1,
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+          backdropFilter: 'blur(10px)'
+        }}>
+          <label style={{ fontSize: '12px', color: COLORS.TEXT_SECONDARY, display: 'block', marginBottom: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            🎯 APPLICATIONS TO MUTE
+          </label>
+          <textarea
+            value={targetApps}
+            onChange={(e) => {
+              setTargetApps(e.target.value);
+            }}
+            onBlur={(e) => {
+              // Send update when user finishes editing
+              const apps = e.target.value.split(',').map(app => app.trim()).filter(app => app.length > 0);
+              updateServerConfig({ target_processes: apps });
+              // Reset styles
+              e.target.style.borderColor = COLORS.BORDER;
+              e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)';
+            }}
+            placeholder="chrome.exe, firefox.exe, Spotify.exe"
+            style={{
+              width: '100%',
+              minHeight: '100px',
+              padding: '12px 16px',
+              background: COLORS.SURFACE,
+              border: `1px solid ${COLORS.BORDER}`,
+              borderRadius: '12px',
+              color: COLORS.TEXT_PRIMARY,
+              fontSize: '13px',
+              fontFamily: 'Roboto, monospace',
+              resize: 'vertical',
+              lineHeight: '1.6',
+              outline: 'none',
+              transition: 'all 0.3s ease',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
+            }}
+            onFocus={(e) => {
+              e.target.style.borderColor = COLORS.ACCENT;
+              e.target.style.boxShadow = '0 4px 20px rgba(78, 82, 255, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1)';
+            }}
+          />
+          <div style={{ fontSize: '11px', color: COLORS.TEXT_MUTED, marginTop: '8px', lineHeight: '1.4' }}>
+            💡 Separate with commas (e.g., chrome.exe, Spotify.exe)
+          </div>
+        </div>
+      </div>
 
-        let position: PositionResult;
-        if (typeof result === 'string') {
-          try {
-            position = JSON.parse(result);
-          } catch (e) {
-            console.error("Failed to parse result as JSON:", e);
-            return;
-          }
-        } else if (typeof result === 'object' && result !== null) {
-          position = result as PositionResult;
-        } else {
-          console.error("Unexpected result type from getPlayheadPosition:", typeof result);
-          return;
-        }
-      
-        if ('error' in position) {
-          console.log("Error getting playhead position:", position.error);
-          return;
-        }
-
-        const currentPosition = position.seconds;
-        console.log("Current position:", currentPosition);
-
-        if (lastPosition.current !== null) {
-          const isMoving = currentPosition > lastPosition.current;
-          console.log("Is moving:", isMoving);
-
-          if (isMoving !== isPlaying) {
-            setIsPlaying(isMoving);
-            if (websocket && websocket.readyState === WebSocket.OPEN) {
-              const message = isMoving ? 'mute' : 'unmute';
-              console.log("Sending message:", message);
-              websocket.send(message);
-            } else {
-              console.log("WebSocket not ready");
-            }
-          }
-        }
-
-        lastPosition.current = currentPosition;
-      });
-    };
-
-    const intervalId = setInterval(monitorTimeline, 100); // Every 100ms
-
-    return () => clearInterval(intervalId);
-  }, [isPlaying, websocket]);
-
-  return null;
+      {/* Footer */}
+      <div style={{
+        paddingTop: '16px',
+        borderTop: `1px solid ${COLORS.BORDER}`,
+        fontSize: '11px',
+        color: COLORS.TEXT_MUTED,
+        textAlign: 'center',
+        fontWeight: '500'
+      }}>
+        AudioStop v{VERSION.full} • Made with 💜
+      </div>
+    </div>
+  );
 };
 
 export default Main;

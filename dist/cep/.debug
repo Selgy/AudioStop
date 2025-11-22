@@ -1,8 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ExtensionList>
-  <Extension Id="com.AudioStop.cep.main">
+  <Extension Id="com.selgy.audiostop.main">
     <HostList>
-      <Host Name="PPRO" Port="8880"/>
+      <Host Name="PPRO" Port="9090"/>
+    </HostList>
+  </Extension>
+  <Extension Id="com.selgy.audiostop.background">
+    <HostList>
+      <Host Name="PPRO" Port="9091"/>
     </HostList>
   </Extension>
 </ExtensionList>

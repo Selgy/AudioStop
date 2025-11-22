@@ -1,0 +1,18 @@
+# AudioStop Python Dependencies
+# Install with: pip install -r requirements.txt
+
+# WebSocket server
+websockets>=13.0
+
+# Windows audio control
+pycaw>=20240210
+
+# Process monitoring
+psutil>=5.9.0
+
+# COM interface (Windows only)
+comtypes>=1.4.0
+
+# PyInstaller for building exe
+pyinstaller>=6.0.0
+

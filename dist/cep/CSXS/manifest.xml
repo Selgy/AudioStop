@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <ExtensionManifest
 Version="6.0"
-ExtensionBundleId="com.AudioStop.cep"
-ExtensionBundleVersion="0.0.1"
-ExtensionBundleName="Audio Stop"
+ExtensionBundleId="com.selgy.audiostop"
+ExtensionBundleVersion="1.0.0"
+ExtensionBundleName="AudioStop"
 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 >
 <ExtensionList>
-  <Extension Id="com.AudioStop.cep.main" Version="0.0.1" />
+  <Extension Id="com.selgy.audiostop.main" Version="1.0.0" />
+  <Extension Id="com.selgy.audiostop.background" Version="1.0.0" />
 </ExtensionList>
 <ExecutionEnvironment>
   <HostList>
@@ -21,7 +22,7 @@ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   </RequiredRuntimeList>
 </ExecutionEnvironment>
 <DispatchInfoList>
-  <Extension Id="com.AudioStop.cep.main">
+  <Extension Id="com.selgy.audiostop.main">
     <DispatchInfo>
       <Resources>
         <MainPath>./main/index.html</MainPath>
@@ -29,6 +30,51 @@ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
           <Parameter>--v=0</Parameter>
           <Parameter>--enable-nodejs</Parameter>
           <Parameter>--mixed-context</Parameter>
+          <Parameter>--allow-file-access</Parameter>
+          <Parameter>--disable-web-security</Parameter>
+          <Parameter>--allow-file-access-from-files</Parameter>
+        </CEFCommandLine>
+      </Resources>
+      <Lifecycle>
+        <AutoVisible>true</AutoVisible>
+      </Lifecycle>
+      <UI>
+        <Type>Modeless</Type>
+        <Menu>AudioStop</Menu>
+        <Geometry>
+          <Size>
+            <Width>400</Width>
+            <Height>600</Height>
+          </Size>
+          <MaxSize>
+            <Width>800</Width>
+            <Height>1000</Height>
+          </MaxSize>
+          <MinSize>
+            <Width>350</Width>
+            <Height>400</Height>
+          </MinSize>
+        </Geometry>
+        <Icons>
+          <Icon Type="Normal">./src/assets/dark-icon.png</Icon>
+          <Icon Type="DarkNormal">./src/assets/light-icon.png</Icon>
+          <Icon Type="RollOver">./src/assets/dark-icon.png</Icon>
+          <Icon Type="DarkRollOver">./src/assets/light-icon.png</Icon>
+        </Icons>
+      </UI>
+    </DispatchInfo>
+  </Extension>
+  <Extension Id="com.selgy.audiostop.background">
+    <DispatchInfo>
+      <Resources>
+        <MainPath>./background/index.html</MainPath>
+        <CEFCommandLine>
+          <Parameter>--v=0</Parameter>
+          <Parameter>--enable-nodejs</Parameter>
+          <Parameter>--mixed-context</Parameter>
+          <Parameter>--allow-file-access</Parameter>
+          <Parameter>--disable-web-security</Parameter>
+          <Parameter>--allow-file-access-from-files</Parameter>
         </CEFCommandLine>
       </Resources>
       <Lifecycle>
@@ -40,10 +86,10 @@ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       </Lifecycle>
       <UI>
         <Type>Custom</Type>
-        <Menu>Audio Stop</Menu>
+        
         <Geometry>
           <Size>
-            <Width>500</Width>
+            <Width>400</Width>
             <Height>1</Height>
           </Size>
         </Geometry>
