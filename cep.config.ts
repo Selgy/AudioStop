@@ -67,7 +67,7 @@ const config: CEP_Config = {
     jsxBin: "off",
   },
   installModules: [],
-  copyAssets: ["./js", "./jsx", "./exec", "./js/lib"],
+  copyAssets: ["./js", "./jsx", "./exec", "./js/lib", "./list_audio_apps.py"],
   copyZipAssets: [],
 };
 

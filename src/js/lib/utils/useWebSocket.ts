@@ -6,6 +6,7 @@ interface UseWebSocketReturn {
   websocket: WebSocket | null;
   connectionStatus: ConnectionStatus;
   sendMessage: (message: string) => void;
+  lastMessage: any;
 }
 
 /**
@@ -14,6 +15,7 @@ interface UseWebSocketReturn {
 export const useWebSocket = (): UseWebSocketReturn => {
   const [websocket, setWebsocket] = useState<WebSocket | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting');
+  const [lastMessage, setLastMessage] = useState<any>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttemptsRef = useRef(0);
 
@@ -32,6 +34,16 @@ export const useWebSocket = (): UseWebSocketReturn => {
         setWebsocket(ws);
         setConnectionStatus('connected');
         reconnectAttemptsRef.current = 0;
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          setLastMessage(data);
+          logger.debug('Received message:', data);
+        } catch (e) {
+          logger.debug('Received non-JSON message:', event.data);
+        }
       };
 
       ws.onerror = (error) => {
@@ -86,6 +98,7 @@ export const useWebSocket = (): UseWebSocketReturn => {
     websocket,
     connectionStatus,
     sendMessage,
+    lastMessage,
   };
 };
 

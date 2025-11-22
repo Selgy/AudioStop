@@ -1,6 +1,6 @@
 {
   "name": "audio-stop",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Automatically mute applications when Premiere Pro timeline plays",
   "scripts": {
     "dev": "vite",

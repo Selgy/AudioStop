@@ -1,16 +1,17 @@
 // main.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { CONFIG } from "../lib/utils/config";
 import { VERSION } from "../lib/utils/version";
 import { useWebSocket } from "../lib/utils/useWebSocket";
 import { StatusCard } from "./components/StatusCard";
 import { ConnectionIndicator } from "./components/ConnectionIndicator";
+import { AppSelector } from "./components/AppSelector";
 
 const Main: React.FC = () => {
-  const { connectionStatus, sendMessage } = useWebSocket();
+  const { connectionStatus, sendMessage, lastMessage } = useWebSocket();
   const [mutingEnabled, setMutingEnabled] = useState(true);
   const [unmuteDelay, setUnmuteDelay] = useState(1.0);
-  const [targetApps, setTargetApps] = useState('chrome.exe, firefox.exe, Spotify.exe');
+  const [selectedApps, setSelectedApps] = useState<string[]>(['chrome.exe', 'firefox.exe', 'Spotify.exe']);
 
   // Function to send config update to server
   const updateServerConfig = (config: any) => {
@@ -20,6 +21,12 @@ const Main: React.FC = () => {
         ...config
       }));
     }
+  };
+
+  // Handle app selection changes
+  const handleAppSelectionChange = (apps: string[]) => {
+    setSelectedApps(apps);
+    updateServerConfig({ target_processes: apps });
   };
 
   const { COLORS } = CONFIG.UI;
@@ -130,23 +137,6 @@ const Main: React.FC = () => {
           </button>
         </div>
 
-        {/* Info */}
-        <div style={{
-          padding: '16px',
-          background: COLORS.SURFACE,
-          borderRadius: '16px',
-          border: `1px solid ${COLORS.BORDER}`,
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
-          backdropFilter: 'blur(10px)'
-        }}>
-          <div style={{ fontSize: '12px', color: COLORS.TEXT_SECONDARY, marginBottom: '10px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            ℹ️ INFO
-          </div>
-          <div style={{ fontSize: '13px', lineHeight: '1.6', color: COLORS.TEXT_SECONDARY }}>
-            Timeline monitoring is active in the background. Apps will be muted automatically when you play.
-          </div>
-        </div>
-
         {/* Unmute Delay */}
         <div style={{
           padding: '20px',
@@ -207,57 +197,13 @@ const Main: React.FC = () => {
         </div>
 
         {/* Target Apps */}
-        <div style={{
-          padding: '20px',
-          background: COLORS.SURFACE,
-          borderRadius: '16px',
-          border: `1px solid ${COLORS.BORDER}`,
-          flex: 1,
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
-          backdropFilter: 'blur(10px)'
-        }}>
-          <label style={{ fontSize: '12px', color: COLORS.TEXT_SECONDARY, display: 'block', marginBottom: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            🎯 APPLICATIONS TO MUTE
-          </label>
-          <textarea
-            value={targetApps}
-            onChange={(e) => {
-              setTargetApps(e.target.value);
-            }}
-            onBlur={(e) => {
-              // Send update when user finishes editing
-              const apps = e.target.value.split(',').map(app => app.trim()).filter(app => app.length > 0);
-              updateServerConfig({ target_processes: apps });
-              // Reset styles
-              e.target.style.borderColor = COLORS.BORDER;
-              e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)';
-            }}
-            placeholder="chrome.exe, firefox.exe, Spotify.exe"
-            style={{
-              width: '100%',
-              minHeight: '100px',
-              padding: '12px 16px',
-              background: COLORS.SURFACE,
-              border: `1px solid ${COLORS.BORDER}`,
-              borderRadius: '12px',
-              color: COLORS.TEXT_PRIMARY,
-              fontSize: '13px',
-              fontFamily: 'Roboto, monospace',
-              resize: 'vertical',
-              lineHeight: '1.6',
-              outline: 'none',
-              transition: 'all 0.3s ease',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
-            }}
-            onFocus={(e) => {
-              e.target.style.borderColor = COLORS.ACCENT;
-              e.target.style.boxShadow = '0 4px 20px rgba(78, 82, 255, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1)';
-            }}
-          />
-          <div style={{ fontSize: '11px', color: COLORS.TEXT_MUTED, marginTop: '8px', lineHeight: '1.4' }}>
-            💡 Separate with commas (e.g., chrome.exe, Spotify.exe)
-          </div>
-        </div>
+        <AppSelector
+          selectedApps={selectedApps}
+          onSelectionChange={handleAppSelectionChange}
+          sendMessage={sendMessage}
+          connectionStatus={connectionStatus}
+          lastMessage={lastMessage}
+        />
       </div>
 
       {/* Footer */}

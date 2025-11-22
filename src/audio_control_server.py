@@ -146,6 +146,36 @@ async def unmute_target_processes():
     except Exception as e:
         logging.error(f"Error in unmute_target_processes: {e}")
 
+async def get_audio_applications():
+    """Get list of applications currently playing audio"""
+    try:
+        sessions = await asyncio.to_thread(com_wrapper, AudioUtilities.GetAllSessions)
+        audio_apps = []
+        seen_processes = set()
+        
+        for session in sessions:
+            if session.Process and session.Process.name():
+                process_name = session.Process.name()
+                # Skip system processes and duplicates
+                if process_name not in seen_processes and process_name not in ['audiodg.exe', 'System', 'svchost.exe']:
+                    try:
+                        # Get process info
+                        process = psutil.Process(session.Process.pid)
+                        audio_apps.append({
+                            'name': process_name,
+                            'exe': process_name,
+                            'fullPath': process.exe() if hasattr(process, 'exe') else '',
+                            'pid': session.Process.pid
+                        })
+                        seen_processes.add(process_name)
+                    except (psutil.NoSuchProcess, psutil.AccessDenied):
+                        pass
+        
+        return audio_apps
+    except Exception as e:
+        logging.error(f"Error getting audio applications: {e}")
+        return []
+
 async def handler(websocket):
     """WebSocket message handler"""
     global unmute_task, muting_enabled, UNMUTE_DELAY_SECONDS, TARGET_PROCESSES
@@ -156,6 +186,16 @@ async def handler(websocket):
             # Try to parse as JSON for config updates
             try:
                 data = json.loads(message)
+                
+                # Handle request for audio applications list
+                if data.get('type') == 'get_audio_apps':
+                    audio_apps = await get_audio_applications()
+                    await websocket.send(json.dumps({
+                        'type': 'audio_apps_list',
+                        'apps': audio_apps,
+                        'current_targets': TARGET_PROCESSES
+                    }))
+                    continue
                 
                 # Handle config updates
                 if data.get('type') == 'update_config':
