@@ -11,7 +11,8 @@ const Main: React.FC = () => {
   const { connectionStatus, sendMessage, lastMessage } = useWebSocket();
   const [mutingEnabled, setMutingEnabled] = useState(true);
   const [unmuteDelay, setUnmuteDelay] = useState(1.0);
-  const [selectedApps, setSelectedApps] = useState<string[]>(['chrome.exe', 'firefox.exe', 'Spotify.exe']);
+  const [selectedApps, setSelectedApps] = useState<string[]>([]);
+  const [configLoaded, setConfigLoaded] = useState(false);
 
   // Function to send config update to server
   const updateServerConfig = (config: any) => {
@@ -28,6 +29,23 @@ const Main: React.FC = () => {
     setSelectedApps(apps);
     updateServerConfig({ target_processes: apps });
   };
+
+  // Load config from server on connection
+  useEffect(() => {
+    if (connectionStatus === 'connected' && !configLoaded) {
+      sendMessage(JSON.stringify({ type: 'get_config' }));
+    }
+  }, [connectionStatus, configLoaded, sendMessage]);
+
+  // Handle incoming config data
+  useEffect(() => {
+    if (lastMessage && lastMessage.type === 'config_data') {
+      setMutingEnabled(lastMessage.muting_enabled ?? true);
+      setUnmuteDelay(lastMessage.unmute_delay_seconds ?? 1.0);
+      setSelectedApps(lastMessage.target_processes ?? []);
+      setConfigLoaded(true);
+    }
+  }, [lastMessage]);
 
   const { COLORS } = CONFIG.UI;
 
@@ -135,23 +153,6 @@ const Main: React.FC = () => {
               boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
             }} />
           </button>
-        </div>
-
-        {/* Info */}
-        <div style={{
-          padding: '16px',
-          background: COLORS.SURFACE,
-          borderRadius: '16px',
-          border: `1px solid ${COLORS.BORDER}`,
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
-          backdropFilter: 'blur(10px)'
-        }}>
-          <div style={{ fontSize: '12px', color: COLORS.TEXT_SECONDARY, marginBottom: '10px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            ℹ️ INFO
-          </div>
-          <div style={{ fontSize: '13px', lineHeight: '1.6', color: COLORS.TEXT_SECONDARY }}>
-            Timeline monitoring is active in the background. Apps will be muted automatically when you play.
-          </div>
         </div>
 
         {/* Unmute Delay */}

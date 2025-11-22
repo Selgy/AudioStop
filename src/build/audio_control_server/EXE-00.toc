@@ -118,34 +118,6 @@
   ('python3.dll', 'C:\\Python313\\python3.dll', 'BINARY'),
   ('VCRUNTIME140_1.dll', 'C:\\Python313\\VCRUNTIME140_1.dll', 'BINARY'),
   ('icon.ico', 'E:\\DEV\\AudioStop\\src\\icon.ico', 'DATA'),
-  ('cryptography-41.0.7.dist-info\\RECORD',
-   'E:\\DEV\\YoutubetoPremiere '
-   'V2\\.venv\\Lib\\site-packages\\cryptography-41.0.7.dist-info\\RECORD',
-   'DATA'),
-  ('cryptography-41.0.7.dist-info\\top_level.txt',
-   'E:\\DEV\\YoutubetoPremiere '
-   'V2\\.venv\\Lib\\site-packages\\cryptography-41.0.7.dist-info\\top_level.txt',
-   'DATA'),
-  ('cryptography-41.0.7.dist-info\\INSTALLER',
-   'E:\\DEV\\YoutubetoPremiere '
-   'V2\\.venv\\Lib\\site-packages\\cryptography-41.0.7.dist-info\\INSTALLER',
-   'DATA'),
-  ('cryptography-41.0.7.dist-info\\LICENSE.BSD',
-   'E:\\DEV\\YoutubetoPremiere '
-   'V2\\.venv\\Lib\\site-packages\\cryptography-41.0.7.dist-info\\LICENSE.BSD',
-   'DATA'),
-  ('cryptography-41.0.7.dist-info\\LICENSE',
-   'E:\\DEV\\YoutubetoPremiere '
-   'V2\\.venv\\Lib\\site-packages\\cryptography-41.0.7.dist-info\\LICENSE',
-   'DATA'),
-  ('cryptography-41.0.7.dist-info\\LICENSE.APACHE',
-   'E:\\DEV\\YoutubetoPremiere '
-   'V2\\.venv\\Lib\\site-packages\\cryptography-41.0.7.dist-info\\LICENSE.APACHE',
-   'DATA'),
-  ('cryptography-41.0.7.dist-info\\REQUESTED',
-   'E:\\DEV\\YoutubetoPremiere '
-   'V2\\.venv\\Lib\\site-packages\\cryptography-41.0.7.dist-info\\REQUESTED',
-   'DATA'),
   ('cryptography-41.0.7.dist-info\\WHEEL',
    'E:\\DEV\\YoutubetoPremiere '
    'V2\\.venv\\Lib\\site-packages\\cryptography-41.0.7.dist-info\\WHEEL',
@@ -154,25 +126,73 @@
    'E:\\DEV\\YoutubetoPremiere '
    'V2\\.venv\\Lib\\site-packages\\cryptography-41.0.7.dist-info\\METADATA',
    'DATA'),
-  ('MarkupSafe-3.0.2.dist-info\\INSTALLER',
+  ('cryptography-41.0.7.dist-info\\LICENSE.BSD',
    'E:\\DEV\\YoutubetoPremiere '
-   'V2\\.venv\\Lib\\site-packages\\MarkupSafe-3.0.2.dist-info\\INSTALLER',
+   'V2\\.venv\\Lib\\site-packages\\cryptography-41.0.7.dist-info\\LICENSE.BSD',
    'DATA'),
-  ('websockets-15.0.1.dist-info\\METADATA',
+  ('cryptography-41.0.7.dist-info\\REQUESTED',
    'E:\\DEV\\YoutubetoPremiere '
-   'V2\\.venv\\Lib\\site-packages\\websockets-15.0.1.dist-info\\METADATA',
+   'V2\\.venv\\Lib\\site-packages\\cryptography-41.0.7.dist-info\\REQUESTED',
+   'DATA'),
+  ('cryptography-41.0.7.dist-info\\INSTALLER',
+   'E:\\DEV\\YoutubetoPremiere '
+   'V2\\.venv\\Lib\\site-packages\\cryptography-41.0.7.dist-info\\INSTALLER',
+   'DATA'),
+  ('cryptography-41.0.7.dist-info\\LICENSE.APACHE',
+   'E:\\DEV\\YoutubetoPremiere '
+   'V2\\.venv\\Lib\\site-packages\\cryptography-41.0.7.dist-info\\LICENSE.APACHE',
+   'DATA'),
+  ('cryptography-41.0.7.dist-info\\LICENSE',
+   'E:\\DEV\\YoutubetoPremiere '
+   'V2\\.venv\\Lib\\site-packages\\cryptography-41.0.7.dist-info\\LICENSE',
+   'DATA'),
+  ('cryptography-41.0.7.dist-info\\top_level.txt',
+   'E:\\DEV\\YoutubetoPremiere '
+   'V2\\.venv\\Lib\\site-packages\\cryptography-41.0.7.dist-info\\top_level.txt',
+   'DATA'),
+  ('cryptography-41.0.7.dist-info\\RECORD',
+   'E:\\DEV\\YoutubetoPremiere '
+   'V2\\.venv\\Lib\\site-packages\\cryptography-41.0.7.dist-info\\RECORD',
    'DATA'),
   ('MarkupSafe-3.0.2.dist-info\\RECORD',
    'E:\\DEV\\YoutubetoPremiere '
    'V2\\.venv\\Lib\\site-packages\\MarkupSafe-3.0.2.dist-info\\RECORD',
    'DATA'),
-  ('websockets-15.0.1.dist-info\\entry_points.txt',
+  ('websockets-15.0.1.dist-info\\RECORD',
    'E:\\DEV\\YoutubetoPremiere '
-   'V2\\.venv\\Lib\\site-packages\\websockets-15.0.1.dist-info\\entry_points.txt',
+   'V2\\.venv\\Lib\\site-packages\\websockets-15.0.1.dist-info\\RECORD',
+   'DATA'),
+  ('websockets-15.0.1.dist-info\\METADATA',
+   'E:\\DEV\\YoutubetoPremiere '
+   'V2\\.venv\\Lib\\site-packages\\websockets-15.0.1.dist-info\\METADATA',
+   'DATA'),
+  ('MarkupSafe-3.0.2.dist-info\\WHEEL',
+   'E:\\DEV\\YoutubetoPremiere '
+   'V2\\.venv\\Lib\\site-packages\\MarkupSafe-3.0.2.dist-info\\WHEEL',
+   'DATA'),
+  ('websockets-15.0.1.dist-info\\INSTALLER',
+   'E:\\DEV\\YoutubetoPremiere '
+   'V2\\.venv\\Lib\\site-packages\\websockets-15.0.1.dist-info\\INSTALLER',
+   'DATA'),
+  ('MarkupSafe-3.0.2.dist-info\\METADATA',
+   'E:\\DEV\\YoutubetoPremiere '
+   'V2\\.venv\\Lib\\site-packages\\MarkupSafe-3.0.2.dist-info\\METADATA',
+   'DATA'),
+  ('websockets-15.0.1.dist-info\\REQUESTED',
+   'E:\\DEV\\YoutubetoPremiere '
+   'V2\\.venv\\Lib\\site-packages\\websockets-15.0.1.dist-info\\REQUESTED',
    'DATA'),
   ('MarkupSafe-3.0.2.dist-info\\top_level.txt',
    'E:\\DEV\\YoutubetoPremiere '
    'V2\\.venv\\Lib\\site-packages\\MarkupSafe-3.0.2.dist-info\\top_level.txt',
+   'DATA'),
+  ('websockets-15.0.1.dist-info\\WHEEL',
+   'E:\\DEV\\YoutubetoPremiere '
+   'V2\\.venv\\Lib\\site-packages\\websockets-15.0.1.dist-info\\WHEEL',
+   'DATA'),
+  ('websockets-15.0.1.dist-info\\entry_points.txt',
+   'E:\\DEV\\YoutubetoPremiere '
+   'V2\\.venv\\Lib\\site-packages\\websockets-15.0.1.dist-info\\entry_points.txt',
    'DATA'),
   ('MarkupSafe-3.0.2.dist-info\\LICENSE.txt',
    'E:\\DEV\\YoutubetoPremiere '
@@ -182,33 +202,13 @@
    'E:\\DEV\\YoutubetoPremiere '
    'V2\\.venv\\Lib\\site-packages\\websockets-15.0.1.dist-info\\LICENSE',
    'DATA'),
-  ('MarkupSafe-3.0.2.dist-info\\WHEEL',
+  ('MarkupSafe-3.0.2.dist-info\\INSTALLER',
    'E:\\DEV\\YoutubetoPremiere '
-   'V2\\.venv\\Lib\\site-packages\\MarkupSafe-3.0.2.dist-info\\WHEEL',
-   'DATA'),
-  ('websockets-15.0.1.dist-info\\REQUESTED',
-   'E:\\DEV\\YoutubetoPremiere '
-   'V2\\.venv\\Lib\\site-packages\\websockets-15.0.1.dist-info\\REQUESTED',
-   'DATA'),
-  ('MarkupSafe-3.0.2.dist-info\\METADATA',
-   'E:\\DEV\\YoutubetoPremiere '
-   'V2\\.venv\\Lib\\site-packages\\MarkupSafe-3.0.2.dist-info\\METADATA',
-   'DATA'),
-  ('websockets-15.0.1.dist-info\\RECORD',
-   'E:\\DEV\\YoutubetoPremiere '
-   'V2\\.venv\\Lib\\site-packages\\websockets-15.0.1.dist-info\\RECORD',
+   'V2\\.venv\\Lib\\site-packages\\MarkupSafe-3.0.2.dist-info\\INSTALLER',
    'DATA'),
   ('websockets-15.0.1.dist-info\\top_level.txt',
    'E:\\DEV\\YoutubetoPremiere '
    'V2\\.venv\\Lib\\site-packages\\websockets-15.0.1.dist-info\\top_level.txt',
-   'DATA'),
-  ('websockets-15.0.1.dist-info\\INSTALLER',
-   'E:\\DEV\\YoutubetoPremiere '
-   'V2\\.venv\\Lib\\site-packages\\websockets-15.0.1.dist-info\\INSTALLER',
-   'DATA'),
-  ('websockets-15.0.1.dist-info\\WHEEL',
-   'E:\\DEV\\YoutubetoPremiere '
-   'V2\\.venv\\Lib\\site-packages\\websockets-15.0.1.dist-info\\WHEEL',
    'DATA'),
   ('base_library.zip',
    'E:\\DEV\\AudioStop\\src\\build\\audio_control_server\\base_library.zip',
@@ -216,7 +216,7 @@
  [],
  False,
  False,
- 1763829299,
+ 1763831989,
  [('runw.exe',
    'E:\\DEV\\YoutubetoPremiere '
    'V2\\.venv\\Lib\\site-packages\\PyInstaller\\bootloader\\Windows-64bit-intel\\runw.exe',

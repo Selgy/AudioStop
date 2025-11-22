@@ -197,6 +197,17 @@ async def handler(websocket):
                     }))
                     continue
                 
+                # Handle request for current config
+                if data.get('type') == 'get_config':
+                    with state_lock:
+                        await websocket.send(json.dumps({
+                            'type': 'config_data',
+                            'muting_enabled': muting_enabled,
+                            'unmute_delay_seconds': UNMUTE_DELAY_SECONDS,
+                            'target_processes': TARGET_PROCESSES
+                        }))
+                    continue
+                
                 # Handle config updates
                 if data.get('type') == 'update_config':
                     with state_lock:

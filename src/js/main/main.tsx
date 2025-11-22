@@ -11,7 +11,8 @@ const Main: React.FC = () => {
   const { connectionStatus, sendMessage, lastMessage } = useWebSocket();
   const [mutingEnabled, setMutingEnabled] = useState(true);
   const [unmuteDelay, setUnmuteDelay] = useState(1.0);
-  const [selectedApps, setSelectedApps] = useState<string[]>(['chrome.exe', 'firefox.exe', 'Spotify.exe']);
+  const [selectedApps, setSelectedApps] = useState<string[]>([]);
+  const [configLoaded, setConfigLoaded] = useState(false);
 
   // Function to send config update to server
   const updateServerConfig = (config: any) => {
@@ -28,6 +29,23 @@ const Main: React.FC = () => {
     setSelectedApps(apps);
     updateServerConfig({ target_processes: apps });
   };
+
+  // Load config from server on connection
+  useEffect(() => {
+    if (connectionStatus === 'connected' && !configLoaded) {
+      sendMessage(JSON.stringify({ type: 'get_config' }));
+    }
+  }, [connectionStatus, configLoaded, sendMessage]);
+
+  // Handle incoming config data
+  useEffect(() => {
+    if (lastMessage && lastMessage.type === 'config_data') {
+      setMutingEnabled(lastMessage.muting_enabled ?? true);
+      setUnmuteDelay(lastMessage.unmute_delay_seconds ?? 1.0);
+      setSelectedApps(lastMessage.target_processes ?? []);
+      setConfigLoaded(true);
+    }
+  }, [lastMessage]);
 
   const { COLORS } = CONFIG.UI;
 

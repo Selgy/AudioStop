@@ -111,6 +111,13 @@ export const AppSelector: React.FC<AppSelectorProps> = ({
     }
   };
 
+  // Auto-load on mount and when connection is established
+  useEffect(() => {
+    if (connectionStatus === 'connected') {
+      loadAudioApps();
+    }
+  }, [connectionStatus]);
+
   const handleToggleApp = (appExe: string) => {
     const newSelection = selectedApps.includes(appExe)
       ? selectedApps.filter(app => app !== appExe)
@@ -138,24 +145,15 @@ export const AppSelector: React.FC<AppSelectorProps> = ({
         }}>
           🎯 APPLICATIONS TO MUTE
         </label>
-        <button
-          onClick={loadAudioApps}
-          disabled={isLoading || connectionStatus !== 'connected'}
-          style={{
-            padding: '6px 12px',
-            background: isLoading ? COLORS.SURFACE_HOVER : `linear-gradient(135deg, ${COLORS.ACCENT} 0%, ${COLORS.ACCENT_HOVER} 100%)`,
-            border: `1px solid ${COLORS.BORDER}`,
-            borderRadius: '8px',
-            color: COLORS.TEXT_PRIMARY,
+        {isLoading && (
+          <span style={{ 
             fontSize: '11px',
-            fontWeight: '600',
-            cursor: isLoading ? 'not-allowed' : 'pointer',
-            transition: 'all 0.3s ease',
-            opacity: isLoading ? 0.6 : 1
-          }}
-        >
-          {isLoading ? '🔄 Loading...' : '🔍 Detect Apps'}
-        </button>
+            color: COLORS.TEXT_MUTED,
+            fontStyle: 'italic'
+          }}>
+            🔄 Detecting...
+          </span>
+        )}
       </div>
 
       {audioApps.length === 0 ? (
@@ -236,13 +234,6 @@ export const AppSelector: React.FC<AppSelectorProps> = ({
                       (not running)
                     </span>
                   )}
-                  {app.priority && !app.inactive && (
-                    <span style={{ 
-                      fontSize: '12px'
-                    }}>
-                      ⭐
-                    </span>
-                  )}
                 </div>
                 <div style={{ 
                   fontSize: '11px', 
@@ -273,7 +264,7 @@ export const AppSelector: React.FC<AppSelectorProps> = ({
         paddingTop: '12px',
         borderTop: `1px solid ${COLORS.BORDER}`
       }}>
-        💡 Play audio in an app, then click "Detect Apps" to find it
+        💡 Applications are detected automatically when playing audio
       </div>
     </div>
   );
