@@ -5,7 +5,7 @@
 ; Version is passed from the workflow as a command line parameter
 ; If VERSION is not defined via command line, use a default
 !ifndef VERSION
-  !define VERSION "2.0.0"
+  !define VERSION "2.0.1"
 !endif
 
 ; Product information

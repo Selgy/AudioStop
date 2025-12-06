@@ -1,16 +1,17 @@
 {
   "name": "audio-stop",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Automatically mute applications when Premiere Pro timeline plays",
   "scripts": {
     "dev": "vite",
     "watch": "tsc && vite build --watch true",
-    "prebuild": "cd src && pyinstaller --onefile --noconsole --hidden-import=websockets --hidden-import=pycaw --hidden-import=comtypes --hidden-import=psutil --add-data \"icon.ico;.\" --icon=icon.ico audio_control_server.py",
-    "build": "rimraf dist/* && yarn prebuild && tsc -p \"tsconfig-build.json\" && vite build --watch false",
+    "prebuild": "cd src && python -m PyInstaller --onefile --noconsole --hidden-import=websockets --hidden-import=pycaw --hidden-import=comtypes --hidden-import=psutil --add-data \"icon.ico;.\" --icon=icon.ico audio_control_server.py",
+    "postbuild": "node -e \"const fs = require('fs'); const path = require('path'); if (fs.existsSync('src/dist/audio_control_server.exe')) { if (!fs.existsSync('dist/cep/exec')) fs.mkdirSync('dist/cep/exec', { recursive: true }); fs.copyFileSync('src/dist/audio_control_server.exe', 'dist/cep/exec/audio_control_server.exe'); console.log('✓ Copied audio_control_server.exe to dist/cep/exec/'); } else { console.error('✗ audio_control_server.exe not found in src/dist/'); process.exit(1); }\"",
+    "build": "rimraf dist/* && yarn prebuild && tsc -p \"tsconfig-build.json\" && vite build --watch false && yarn postbuild",
     "build:cep": "rimraf dist/* && tsc -p \"tsconfig-build.json\" && vite build --watch false",
-    "build:py": "cd src && pyinstaller --onefile --noconsole --hidden-import=websockets --hidden-import=pycaw --hidden-import=comtypes --hidden-import=psutil --add-data \"icon.ico;.\" --icon=icon.ico audio_control_server.py",
-    "zxp": "rimraf dist/* && yarn prebuild && tsc -p \"tsconfig-build.json\" && cross-env ZXP_PACKAGE=true vite build --watch false",
-    "zip": "rimraf dist/* && yarn prebuild && tsc -p \"tsconfig-build.json\" && cross-env ZIP_PACKAGE=true vite build --watch false",
+    "build:py": "cd src && python -m PyInstaller --onefile --noconsole --hidden-import=websockets --hidden-import=pycaw --hidden-import=comtypes --hidden-import=psutil --add-data \"icon.ico;.\" --icon=icon.ico audio_control_server.py",
+    "zxp": "rimraf dist/* && yarn prebuild && tsc -p \"tsconfig-build.json\" && cross-env ZXP_PACKAGE=true vite build --watch false && yarn postbuild",
+    "zip": "rimraf dist/* && yarn prebuild && tsc -p \"tsconfig-build.json\" && cross-env ZIP_PACKAGE=true vite build --watch false && yarn postbuild",
     "serve": "cross-env SERVE_PANEL=true vite preview",
     "symlink": "cross-env ACTION=symlink vite",
     "delsymlink": "cross-env ACTION=delsymlink vite"

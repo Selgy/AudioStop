@@ -12,7 +12,7 @@ import psutil
 
 # Initialize logging with better formatting
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,  # Changed to DEBUG to see more details
     format='%(asctime)s - %(levelname)s - %(message)s',
     datefmt='%H:%M:%S'
 )
@@ -147,33 +147,144 @@ async def unmute_target_processes():
         logging.error(f"Error in unmute_target_processes: {e}")
 
 async def get_audio_applications():
-    """Get list of applications currently playing audio"""
+    """Get list of all audio-capable applications (even if not currently playing)"""
     try:
-        sessions = await asyncio.to_thread(com_wrapper, AudioUtilities.GetAllSessions)
         audio_apps = []
         seen_processes = set()
         
-        for session in sessions:
-            if session.Process and session.Process.name():
-                process_name = session.Process.name()
-                # Skip system processes and duplicates
-                if process_name not in seen_processes and process_name not in ['audiodg.exe', 'System', 'svchost.exe']:
+        # List of processes to ignore
+        ignored_processes = [
+            'audiodg.exe', 
+            'System', 
+            'svchost.exe',
+            'Adobe Premiere Pro.exe',
+            'AfterFX.exe',
+            'Photoshop.exe',
+            'csrss.exe',
+            'winlogon.exe',
+            'dwm.exe',
+            'explorer.exe',
+            'taskhost.exe',
+            'taskhostw.exe'
+        ]
+        
+        # Priority apps (will be sorted first) - these are known audio applications
+        priority_apps = [
+            'Spotify.exe',
+            'chrome.exe',
+            'firefox.exe',
+            'msedge.exe',
+            'brave.exe',
+            'opera.exe',
+            'Discord.exe',
+            'Deezer.exe',
+            'iTunes.exe',
+            'vlc.exe',
+            'AIMP.exe',
+            'foobar2000.exe',
+            'steam.exe',
+            'battle.net.exe',
+            'Origin.exe',
+            'EpicGamesLauncher.exe',
+            'Teams.exe',
+            'Zoom.exe',
+            'Skype.exe',
+            'WhatsApp.exe',
+            'Telegram.exe',
+            'OBS64.exe',
+            'obs32.exe',
+            'Streamlabs OBS.exe'
+        ]
+        
+        # First, get all processes with active audio sessions
+        try:
+            sessions = await asyncio.to_thread(com_wrapper, AudioUtilities.GetAllSessions)
+            for session in sessions:
+                if session.Process:
                     try:
-                        # Get process info
-                        process = psutil.Process(session.Process.pid)
-                        audio_apps.append({
-                            'name': process_name,
-                            'exe': process_name,
-                            'fullPath': process.exe() if hasattr(process, 'exe') else '',
-                            'pid': session.Process.pid
-                        })
-                        seen_processes.add(process_name)
-                    except (psutil.NoSuchProcess, psutil.AccessDenied):
-                        pass
+                        process_name = session.Process.name()
+                        if not process_name:
+                            continue
+                    except Exception as e:
+                        logging.debug(f"Could not get process name: {e}")
+                        continue
+                    
+                    # Skip ignored processes and duplicates
+                    if process_name not in seen_processes and process_name not in ignored_processes:
+                        try:
+                            # Get process info
+                            process = psutil.Process(session.Process.pid)
+                            
+                            # Determine priority
+                            is_priority = process_name in priority_apps
+                            
+                            # Get full path safely
+                            full_path = ''
+                            try:
+                                full_path = process.exe() if hasattr(process, 'exe') else ''
+                            except (psutil.AccessDenied, psutil.NoSuchProcess):
+                                pass
+                            
+                            audio_apps.append({
+                                'name': process_name,
+                                'exe': process_name,
+                                'fullPath': full_path,
+                                'pid': session.Process.pid,
+                                'priority': is_priority,
+                                'active': True  # Has active audio session
+                            })
+                            seen_processes.add(process_name)
+                        except (psutil.NoSuchProcess, psutil.AccessDenied) as e:
+                            logging.debug(f"Could not access process {process_name} (PID {session.Process.pid}): {e}")
+                            pass
+                        except Exception as e:
+                            logging.debug(f"Unexpected error processing {process_name}: {e}")
+                            pass
+        except Exception as e:
+            logging.debug(f"Error getting audio sessions: {e}")
+        
+        # Then, scan all running processes to find known audio applications
+        # that might not have active audio sessions currently
+        try:
+            for proc in psutil.process_iter(['pid', 'name', 'exe']):
+                try:
+                    process_name = proc.info['name']
+                    if not process_name:
+                        continue
+                    
+                    # Only add if it's a priority app and not already seen
+                    if process_name in priority_apps and process_name not in seen_processes:
+                        if process_name not in ignored_processes:
+                            full_path = proc.info.get('exe', '')
+                            audio_apps.append({
+                                'name': process_name,
+                                'exe': process_name,
+                                'fullPath': full_path,
+                                'pid': proc.info['pid'],
+                                'priority': True,
+                                'active': False  # No active audio session
+                            })
+                            seen_processes.add(process_name)
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    pass
+                except Exception as e:
+                    logging.debug(f"Error scanning process: {e}")
+                    pass
+        except Exception as e:
+            logging.debug(f"Error scanning all processes: {e}")
+        
+        # Sort: active apps first, then priority apps, then alphabetically
+        audio_apps.sort(key=lambda x: (
+            not x.get('active', False),  # Active sessions first
+            not x.get('priority', False),  # Then priority apps
+            x['name'].lower()  # Then alphabetically
+        ))
         
         return audio_apps
     except Exception as e:
         logging.error(f"Error getting audio applications: {e}")
+        import traceback
+        logging.debug(traceback.format_exc())
         return []
 
 async def handler(websocket):
@@ -183,29 +294,74 @@ async def handler(websocket):
     
     try:
         async for message in websocket:
+            # Log ALL received messages immediately
+            logging.info(f"📨 [RAW] Received message: {message[:200]}")  # Limit length for safety
             # Try to parse as JSON for config updates
             try:
                 data = json.loads(message)
+                logging.info(f"✓ Parsed JSON: type={data.get('type', 'unknown')}")
                 
                 # Handle request for audio applications list
                 if data.get('type') == 'get_audio_apps':
-                    audio_apps = await get_audio_applications()
-                    await websocket.send(json.dumps({
-                        'type': 'audio_apps_list',
-                        'apps': audio_apps,
-                        'current_targets': TARGET_PROCESSES
-                    }))
+                    logging.info("✓ Received get_audio_apps request")
+                    try:
+                        # Send immediate acknowledgment
+                        logging.info("Processing get_audio_apps request...")
+                        
+                        # Call get_audio_applications with timeout protection
+                        try:
+                            audio_apps = await asyncio.wait_for(
+                                get_audio_applications(),
+                                timeout=5.0  # 5 second timeout
+                            )
+                        except asyncio.TimeoutError:
+                            logging.error("get_audio_applications() timed out after 5 seconds")
+                            audio_apps = []
+                        
+                        logging.info(f"Found {len(audio_apps)} audio application(s)")
+                        if audio_apps:
+                            logging.info(f"Applications: {', '.join([app.get('name', 'Unknown') for app in audio_apps])}")
+                        
+                        response = {
+                            'type': 'audio_apps_list',
+                            'apps': audio_apps,
+                            'current_targets': TARGET_PROCESSES,
+                            'success': True
+                        }
+                        response_json = json.dumps(response)
+                        logging.info(f"Sending response ({len(response_json)} bytes)...")
+                        await websocket.send(response_json)
+                        logging.info(f"✓ Successfully sent audio apps list: {len(audio_apps)} apps")
+                    except Exception as e:
+                        logging.error(f"✗ Error handling get_audio_apps request: {e}")
+                        import traceback
+                        logging.error(traceback.format_exc())
+                        try:
+                            error_response = {
+                                'type': 'audio_apps_list',
+                                'apps': [],
+                                'current_targets': TARGET_PROCESSES,
+                                'success': False,
+                                'error': str(e)
+                            }
+                            await websocket.send(json.dumps(error_response))
+                            logging.info("✓ Sent error response")
+                        except Exception as send_error:
+                            logging.error(f"Failed to send error response: {send_error}")
                     continue
                 
                 # Handle request for current config
                 if data.get('type') == 'get_config':
+                    logging.info("✓ Received get_config request")
                     with state_lock:
-                        await websocket.send(json.dumps({
+                        config_response = {
                             'type': 'config_data',
                             'muting_enabled': muting_enabled,
                             'unmute_delay_seconds': UNMUTE_DELAY_SECONDS,
                             'target_processes': TARGET_PROCESSES
-                        }))
+                        }
+                        await websocket.send(json.dumps(config_response))
+                        logging.info("✓ Sent config_data response")
                     continue
                 
                 # Handle config updates
@@ -237,8 +393,9 @@ async def handler(websocket):
                     await websocket.send(json.dumps({'type': 'config_updated', 'success': True}))
                     continue
                     
-            except json.JSONDecodeError:
+            except json.JSONDecodeError as e:
                 # Not JSON, treat as simple command
+                logging.debug(f"Message is not JSON: {message}, error: {e}")
                 pass
             
             with state_lock:

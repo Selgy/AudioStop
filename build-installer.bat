@@ -60,7 +60,7 @@ if not exist "dist\cep\exec" mkdir "dist\cep\exec"
 copy "src\dist\audio_control_server.exe" "dist\cep\exec\audio_control_server.exe" /Y
 
 REM Build NSIS installer
-"%MAKENSIS%" /DVERSION=2.0.0 installer.nsi
+"%MAKENSIS%" /DVERSION=2.0.1 installer.nsi
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Installer creation failed!
     pause
@@ -72,7 +72,7 @@ echo =====================================
 echo   ✅ Build completed successfully!
 echo =====================================
 echo.
-echo Installer created: AudioStop-2.0.0-Setup.exe
+echo Installer created: AudioStop-2.0.1-Setup.exe
 echo.
 pause
 

@@ -2,13 +2,13 @@
 <ExtensionManifest
 Version="6.0"
 ExtensionBundleId="com.selgy.audiostop"
-ExtensionBundleVersion="2.0.0"
+ExtensionBundleVersion="2.0.1"
 ExtensionBundleName="AudioStop"
 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 >
 <ExtensionList>
-  <Extension Id="com.selgy.audiostop.main" Version="2.0.0" />
-  <Extension Id="com.selgy.audiostop.background" Version="2.0.0" />
+  <Extension Id="com.selgy.audiostop.main" Version="2.0.1" />
+  <Extension Id="com.selgy.audiostop.background" Version="2.0.1" />
 </ExtensionList>
 <ExecutionEnvironment>
   <HostList>

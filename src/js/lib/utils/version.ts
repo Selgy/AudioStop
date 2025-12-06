@@ -3,9 +3,9 @@
  */
 
 export const VERSION = {
-  major: 1,
+  major: 2,
   minor: 0,
-  patch: 0,
+  patch: 1,
   get full() {
     return `${this.major}.${this.minor}.${this.patch}`;
   },

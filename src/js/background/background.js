@@ -88,10 +88,23 @@ function startAudioServer() {
         audioServerProcess = spawn(audioExecutablePath, [], {
             cwd: path.dirname(audioExecutablePath),
             env: { ...process.env },
-            stdio: 'ignore',
+            stdio: ['ignore', 'pipe', 'pipe'],  // Allow stdout and stderr to be captured
             detached: false,
             windowsHide: true
         });
+
+        // Log server output
+        if (audioServerProcess.stdout) {
+            audioServerProcess.stdout.on('data', (data) => {
+                console.log(`[AudioStop Server] ${data.toString().trim()}`);
+            });
+        }
+        
+        if (audioServerProcess.stderr) {
+            audioServerProcess.stderr.on('data', (data) => {
+                console.error(`[AudioStop Server Error] ${data.toString().trim()}`);
+            });
+        }
 
         audioServerProcess.on('error', (err) => {
             console.error(`[AudioStop Background] Failed to start audio server: ${err}`);

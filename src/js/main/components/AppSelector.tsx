@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { CONFIG } from '../../lib/utils/config';
 
 interface AudioApp {
@@ -27,96 +27,165 @@ export const AppSelector: React.FC<AppSelectorProps> = ({
 }) => {
   const [audioApps, setAudioApps] = useState<AudioApp[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const responseReceivedRef = useRef<boolean>(false);
   const { COLORS } = CONFIG.UI;
 
-  const loadAudioApps = async () => {
+  const loadAudioApps = useCallback(async () => {
+    if (connectionStatus !== 'connected') {
+      console.warn('[AppSelector] Cannot load apps: WebSocket not connected');
+      return;
+    }
+    
+    // Clear any existing timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    
+    // Reset response flag
+    responseReceivedRef.current = false;
+    
     setIsLoading(true);
+    console.log('[AppSelector] Requesting audio apps list...');
+    
+    // Timeout safety: stop loading after 10 seconds if no response
+    // Store timeout ID in a local variable to check in callback
+    const timeoutId = setTimeout(() => {
+      // Double-check the flag - if it's true, response was received
+      if (responseReceivedRef.current) {
+        console.log('[AppSelector] ✓ Timeout callback fired but response was already received - ignoring');
+        timeoutRef.current = null;
+        return;
+      }
+      
+      // If flag is still false, check if lastMessage has the response (race condition protection)
+      // This shouldn't happen, but it's a safety check
+      console.warn('[AppSelector] ⚠ Timeout waiting for audio apps response (flag was false)');
+      setIsLoading(false);
+      
+      // Clear the ref
+      if (timeoutRef.current === timeoutId) {
+        timeoutRef.current = null;
+      }
+    }, 10000);
+    
+    timeoutRef.current = timeoutId;
     
     try {
-      // Use Node.js to execute the Python script
-      const { spawn } = require('child_process');
-      const path = require('path');
-      const os = require('os');
-      
-      // Get extension root path
-      let extensionRoot = '';
-      if (typeof window !== 'undefined' && (window as any).__adobe_cep__) {
-        extensionRoot = (window as any).__adobe_cep__.getSystemPath('extension');
-      }
-      
-      let decodedPath = '';
-      if (os.platform() === 'win32') {
-        decodedPath = decodeURIComponent(extensionRoot.replace(/^file:[/\\]*/, ''));
-      } else if (os.platform() === 'darwin') {
-        decodedPath = '/' + decodeURIComponent(extensionRoot.replace(/^file:\/\//, ''));
-      }
-      
-      // Path to Python script
-      const scriptPath = path.join(decodedPath, 'list_audio_apps.py');
-      
-      // Execute Python script
-      const pythonProcess = spawn('python', [scriptPath], {
-        cwd: path.dirname(scriptPath),
-        windowsHide: true
-      });
-      
-      let output = '';
-      
-      pythonProcess.stdout.on('data', (data: Buffer) => {
-        output += data.toString();
-      });
-      
-      pythonProcess.stderr.on('data', (data: Buffer) => {
-        console.error('[AppSelector] Python error:', data.toString());
-      });
-      
-      pythonProcess.on('close', (code: number) => {
-        setIsLoading(false);
-        
-        if (code === 0 && output) {
-          try {
-            const result = JSON.parse(output);
-            if (result.success) {
-              const detectedApps = result.apps || [];
-              
-              // Add selected apps that are not currently detected
-              const detectedExes = new Set(detectedApps.map((app: AudioApp) => app.exe));
-              const missingSelectedApps = selectedApps
-                .filter(exe => !detectedExes.has(exe))
-                .map(exe => ({
-                  name: exe,
-                  exe: exe,
-                  fullPath: '',
-                  pid: 0,
-                  priority: false,
-                  inactive: true // Mark as inactive
-                }));
-              
-              // Combine: selected inactive apps first, then detected apps
-              const allApps = [...missingSelectedApps, ...detectedApps];
-              setAudioApps(allApps);
-            } else {
-              console.error('[AppSelector] Error from Python:', result.error);
-            }
-          } catch (e) {
-            console.error('[AppSelector] Failed to parse Python output:', e);
-          }
-        } else {
-          console.error('[AppSelector] Python script failed with code:', code);
-        }
-      });
+      // Request audio apps list via WebSocket
+      sendMessage(JSON.stringify({ type: 'get_audio_apps' }));
     } catch (error) {
-      console.error('[AppSelector] Failed to load audio apps:', error);
+      console.error('[AppSelector] Failed to request audio apps:', error);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
       setIsLoading(false);
     }
-  };
+  }, [connectionStatus, sendMessage]);
+
+  // Handle incoming audio apps list from WebSocket
+  // Use useLayoutEffect to clear timeout SYNCHRONOUSLY before render
+  useLayoutEffect(() => {
+    if (lastMessage && lastMessage.type === 'audio_apps_list') {
+      // Mark that we received a response IMMEDIATELY
+      responseReceivedRef.current = true;
+      
+      // Clear timeout IMMEDIATELY when we detect the response (synchronous)
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+        console.log('[AppSelector] ✓ Cleared timeout - response received');
+      }
+      
+      setIsLoading(false);
+    }
+  }, [lastMessage]); // Depend on lastMessage itself, not just the type, to catch all updates
+
+  // Separate effect to process the apps list
+  useEffect(() => {
+    if (lastMessage && lastMessage.type === 'audio_apps_list') {
+      // Mark response received FIRST, before any processing
+      // This ensures the flag is set even if processing takes time
+      responseReceivedRef.current = true;
+      
+      // Clear timeout immediately
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+        console.log('[AppSelector] ✓ Cleared timeout - response received (in useEffect)');
+      }
+      
+      setIsLoading(false);
+      
+      console.log('[AppSelector] ✓ Received audio apps list:', {
+        success: lastMessage.success,
+        appsCount: lastMessage.apps?.length || 0,
+        apps: lastMessage.apps,
+        error: lastMessage.error
+      });
+      
+      // Handle error case
+      if (lastMessage.success === false) {
+        console.error('[AppSelector] Failed to get audio apps:', lastMessage.error);
+        // Keep existing apps if available, but clear if we got an error
+        if (lastMessage.error) {
+          setAudioApps([]);
+        }
+        return;
+      }
+      
+      // Get apps from response (success can be true or undefined)
+      const detectedApps = lastMessage.apps || [];
+      console.log('[AppSelector] Processing detected apps:', detectedApps.length);
+      
+      if (detectedApps.length === 0) {
+        console.log('[AppSelector] No audio applications detected.');
+      }
+      
+      // Map server's 'active' field to 'inactive' for UI compatibility
+      const processedApps = detectedApps.map((app: any) => ({
+        ...app,
+        inactive: app.active === false  // Convert active to inactive
+      }));
+      
+      // Add selected apps that are not currently detected
+      const detectedExes = new Set(processedApps.map((app: AudioApp) => app.exe));
+      const missingSelectedApps = selectedApps
+        .filter(exe => !detectedExes.has(exe))
+        .map(exe => ({
+          name: exe,
+          exe: exe,
+          fullPath: '',
+          pid: 0,
+          priority: false,
+          inactive: true // Mark as inactive
+        }));
+      
+      // Combine: selected inactive apps first, then detected apps
+      const allApps = [...missingSelectedApps, ...processedApps];
+      console.log('[AppSelector] ✓ Setting audio apps:', allApps.length, 'total apps');
+      console.log('[AppSelector] Apps details:', allApps.map(app => ({ name: app.name, exe: app.exe })));
+      setAudioApps(allApps);
+    }
+  }, [lastMessage, selectedApps]);
+  
+  // Debug: log when audioApps changes
+  useEffect(() => {
+    console.log('[AppSelector] audioApps state changed:', audioApps.length, 'apps');
+  }, [audioApps]);
 
   // Auto-load on mount and when connection is established
   useEffect(() => {
     if (connectionStatus === 'connected') {
-      loadAudioApps();
+      // Small delay to ensure WebSocket is fully ready
+      const timer = setTimeout(() => {
+        loadAudioApps();
+      }, 100);
+      return () => clearTimeout(timer);
     }
-  }, [connectionStatus]);
+  }, [connectionStatus, loadAudioApps]);
 
   const handleToggleApp = (appExe: string) => {
     const newSelection = selectedApps.includes(appExe)
@@ -145,18 +214,45 @@ export const AppSelector: React.FC<AppSelectorProps> = ({
         }}>
           🎯 APPLICATIONS TO MUTE
         </label>
-        {isLoading && (
-          <span style={{ 
-            fontSize: '11px',
-            color: COLORS.TEXT_MUTED,
-            fontStyle: 'italic'
-          }}>
-            🔄 Detecting...
-          </span>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button
+            onClick={loadAudioApps}
+            disabled={isLoading || connectionStatus !== 'connected'}
+            style={{
+              padding: '6px 12px',
+              fontSize: '11px',
+              fontWeight: '600',
+              color: COLORS.TEXT_PRIMARY,
+              background: connectionStatus === 'connected' && !isLoading 
+                ? COLORS.SURFACE_HOVER 
+                : COLORS.BORDER,
+              border: `1px solid ${COLORS.BORDER}`,
+              borderRadius: '8px',
+              cursor: connectionStatus === 'connected' && !isLoading ? 'pointer' : 'not-allowed',
+              opacity: connectionStatus === 'connected' && !isLoading ? 1 : 0.5,
+              transition: 'all 0.2s ease',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px'
+            }}
+            onMouseEnter={(e) => {
+              if (connectionStatus === 'connected' && !isLoading) {
+                e.currentTarget.style.background = COLORS.ACCENT;
+                e.currentTarget.style.borderColor = COLORS.ACCENT;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (connectionStatus === 'connected' && !isLoading) {
+                e.currentTarget.style.background = COLORS.SURFACE_HOVER;
+                e.currentTarget.style.borderColor = COLORS.BORDER;
+              }
+            }}
+          >
+            🔍 Refresh
+          </button>
+        </div>
       </div>
 
-      {audioApps.length === 0 ? (
+      {isLoading ? (
         <div style={{
           padding: '20px',
           textAlign: 'center',
@@ -164,7 +260,29 @@ export const AppSelector: React.FC<AppSelectorProps> = ({
           fontSize: '13px',
           fontStyle: 'italic'
         }}>
-          Click "Detect Apps" to scan for applications playing audio
+          🔄 Detecting applications...
+        </div>
+      ) : audioApps.length === 0 ? (
+        <div style={{
+          padding: '20px',
+          textAlign: 'center',
+          color: COLORS.TEXT_MUTED,
+          fontSize: '13px',
+          fontStyle: 'italic',
+          lineHeight: '1.6'
+        }}>
+          {connectionStatus === 'connected' ? (
+            <>
+              <div style={{ marginBottom: '8px' }}>
+                No audio applications detected.
+              </div>
+              <div style={{ fontSize: '12px', opacity: 0.8 }}>
+                💡 <strong>Tip:</strong> Known audio applications are detected automatically. Click <strong>Refresh</strong> to scan again.
+              </div>
+            </>
+          ) : (
+            'Click "Refresh" to scan for audio applications'
+          )}
         </div>
       ) : (
         <div style={{
@@ -264,7 +382,7 @@ export const AppSelector: React.FC<AppSelectorProps> = ({
         paddingTop: '12px',
         borderTop: `1px solid ${COLORS.BORDER}`
       }}>
-        💡 Applications are detected automatically when playing audio
+        💡 Known audio applications are detected automatically
       </div>
     </div>
   );
